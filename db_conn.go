@@ -47,11 +47,15 @@ func initInstance(connStr string) (*sql.DB, error) {
 
 func RegisterMysql(master_addr string, backup_addr string) (*MysqlConn, error) {
 	mysql_conn := new(MysqlConn)
+	mysql_conn.master_addr = master_addr
 	master_db_instance, err = initInstance(master_addr)
 	if err != nil {
 		return nil, err
 	}
 	mysql_conn.masterInstance = master_db_instance
+	if backup_addr == "" {
+		return mysql_conn, nil
+	}
 	backup_fields := strings.Split(backup_addr, ";")
 	for _, value := range backup_fields {
 		var (
@@ -70,7 +74,7 @@ func RegisterMysql(master_addr string, backup_addr string) (*MysqlConn, error) {
 		var db_conf DbConf
 		db_conf.address = backup_addr
 		db_conf.weight = weight
-		total_weight += weight
+		mysql_conn.total_weight += weight
 		mysql_conn.backup_addr = append(mysql_conn.backup_addr, db_conf)
 	}
 	return mysql_conn, nil
@@ -113,8 +117,8 @@ func (c *MysqlConn) chooseBackup() *sql.DB {
 			max_current_weight = bk_db.current_weight
 		}
 	}
-	name := c.backup_addr[i].address + "|" + strconv.Itoa(c.backup_addr[i].weight)
-	c.backup_addr[i].current_weight -= c.total_weight
+	name := c.backup_addr[index].address + "|" + strconv.Itoa(c.backup_addr[index].weight)
+	c.backup_addr[index].current_weight -= c.total_weight
 	chosen_db = c.backupInstances[name]
 	return chosen_db
 }
