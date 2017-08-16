@@ -1,22 +1,22 @@
+/*
+Package xmysql New Feature
+ 1. Read/Write Splitting
+ 2. Master/Backup DB, Multi Backup DB with weights
+ TODO:
+ 3. Write Op Verification
+ 4. More Operation
+ 5. Force Master
+*/
 package xmysql
 
 import (
 	"database/sql"
 	"strconv"
 	"strings"
-
+	// init mysql driver
 	_ "github.com/go-sql-driver/mysql"
 )
 
-/*
- * New Feature
- * 1. Read/Write Splitting
- * 2. Master/Backup DB, Multi Backup DB with weights
- * TODO:
- * 3. Write Op Verification
- * 4. More Operation
- * 5. Force Master
- */
 type DbConf struct {
 	address        string
 	weight         int //in configuration
@@ -48,7 +48,7 @@ func initInstance(connStr string) (*sql.DB, error) {
 func RegisterMysql(master_addr string, backup_addr string) (*MysqlConn, error) {
 	mysql_conn := new(MysqlConn)
 	mysql_conn.master_addr = master_addr
-	master_db_instance, err = initInstance(master_addr)
+	master_db_instance, err := initInstance(master_addr)
 	if err != nil {
 		return nil, err
 	}
@@ -123,14 +123,14 @@ func (c *MysqlConn) chooseBackup() *sql.DB {
 	return chosen_db
 }
 
-func (c *MysqlConn) Select(sql string, args ...interface{}) (results []map[string]string, err error) {
+func (c *MysqlConn) Select(querySql string, args ...interface{}) (results []map[string]string, err error) {
 	var db_instance *sql.DB
 	if len(c.backup_addr) == 0 {
 		db_instance = c.masterInstance
 	} else {
 		db_instance = c.chooseBackup()
 	}
-	rows, err := c.db.Query(sql, args...)
+	rows, err := db_instance.Query(querySql, args...)
 	if err != nil {
 		return
 	}
