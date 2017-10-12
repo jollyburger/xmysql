@@ -37,7 +37,7 @@ func Insert(service string, sql string, args ...interface{}) (lastInsertId int64
 	if conn, ok := GMysqlProxy.mysqlConnPool[service]; ok {
 		return conn.Insert(sql, args...)
 	}
-	err = errors.New("no db instance found")
+	err = errors.New("not found db instance")
 	return
 }
 
@@ -47,7 +47,7 @@ func Update(service string, sql string, args ...interface{}) (rowsAffected int64
 	if conn, ok := GMysqlProxy.mysqlConnPool[service]; ok {
 		return conn.Update(sql, args...)
 	}
-	err = errors.New("no db instance found")
+	err = errors.New("not found db instance")
 	return
 
 }
@@ -58,7 +58,7 @@ func Delete(service string, sql string, args ...interface{}) (rowsAffected int64
 	if conn, ok := GMysqlProxy.mysqlConnPool[service]; ok {
 		return conn.Delete(sql, args...)
 	}
-	err = errors.New("no db instance found")
+	err = errors.New("not found db instance")
 	return
 
 }
@@ -69,7 +69,7 @@ func Select(service string, sql string, args ...interface{}) (result []map[strin
 	if conn, ok := GMysqlProxy.mysqlConnPool[service]; ok {
 		return conn.Select(sql, args...)
 	}
-	err = errors.New("no db instance found")
+	err = errors.New("not found db instance")
 	return
 }
 
@@ -79,6 +79,6 @@ func QueryWithCb(sqlFunc RowScanCallback, service string, sql string, args ...in
 	if conn, ok := GMysqlProxy.mysqlConnPool[service]; ok {
 		return conn.QueryWithCb(sqlFunc, sql, args...)
 	}
-	err = errors.New("no db instance found")
+	err = errors.New("not found db instance")
 	return
 }
