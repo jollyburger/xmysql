@@ -155,3 +155,24 @@ func (c *MysqlConn) Select(querySql string, args ...interface{}) (results []map[
 	}
 	return
 }
+
+// to be used in combination with https://github.com/variadico/scaneo
+type RowScanCallback func(rows *sql.Rows)
+
+func (c *MysqlConn) QueryWithCb(sqlFunc RowScanCallback, querySql string, args ...interface{}) (err error) {
+	var db_instance *sql.DB
+	if len(c.backup_addr) == 0 {
+		db_instance = c.masterInstance
+	} else {
+		db_instance = c.chooseBackup()
+	}
+	rows, err := db_instance.Query(querySql, args...)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+
+	sqlFunc(rows)
+
+	return
+}
