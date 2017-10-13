@@ -72,3 +72,13 @@ func Select(service string, sql string, args ...interface{}) (result []map[strin
 	err = errors.New("not found db instance")
 	return
 }
+
+func QueryWithCb(sqlFunc RowScanCallback, service string, sql string, args ...interface{}) (err error) {
+	GMysqlProxy.mux.RLock()
+	defer GMysqlProxy.mux.RUnlock()
+	if conn, ok := GMysqlProxy.mysqlConnPool[service]; ok {
+		return conn.QueryWithCb(sqlFunc, sql, args...)
+	}
+	err = errors.New("not found db instance")
+	return
+}
