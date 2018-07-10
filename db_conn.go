@@ -13,6 +13,7 @@ import (
 	"database/sql"
 	"strconv"
 	"strings"
+	"time"
 	// init mysql driver
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -33,16 +34,16 @@ type MysqlConn struct {
 	total_weight    int
 }
 
-func initInstance(connStr string) (*sql.DB, error) {
-	db, err := sql.Open("mysql", connStr)
+func initInstance(connStr string) (db *sql.DB, err error) {
+	db, err = sql.Open("mysql", connStr)
 	if err != nil {
-		return nil, err
+		return
 	}
 	err = db.Ping()
 	if err != nil {
-		return nil, err
+		return
 	}
-	return db, nil
+	return
 }
 
 func RegisterMysql(master_addr string, backup_addr string) (*MysqlConn, error) {
@@ -53,6 +54,7 @@ func RegisterMysql(master_addr string, backup_addr string) (*MysqlConn, error) {
 		return nil, err
 	}
 	mysql_conn.masterInstance = master_db_instance
+	go mysql_conn.healthCheck(mysql_conn.masterInstance, mysql_conn.master_addr)
 	if backup_addr == "" {
 		return mysql_conn, nil
 	}
@@ -71,6 +73,7 @@ func RegisterMysql(master_addr string, backup_addr string) (*MysqlConn, error) {
 			return nil, err
 		}
 		mysql_conn.backupInstances[value] = backup_db_instance
+		go mysql_conn.healthCheck(backup_db_instance, backup_addr)
 		var db_conf DbConf
 		db_conf.address = backup_addr
 		db_conf.weight = weight
@@ -78,6 +81,29 @@ func RegisterMysql(master_addr string, backup_addr string) (*MysqlConn, error) {
 		mysql_conn.backup_addr = append(mysql_conn.backup_addr, db_conf)
 	}
 	return mysql_conn, nil
+}
+
+func (c *MysqlConn) healthCheck(db *sql.DB, connStr string) {
+	ticker := time.NewTicker(DEFAULT_PING_PERIOD)
+	defer ticker.Stop()
+	var err error
+	for {
+		select {
+		case <-ticker.C:
+			//timer to check health of DB connection
+			//TODO SELECT FROM 1 = 0 with panic wrapper and recover
+			err = db.Ping()
+			if err == nil {
+				break
+			}
+			db, err = initInstance(connStr)
+			if err != nil {
+				return
+			}
+			go c.healthCheck(db, connStr)
+			return
+		}
+	}
 }
 
 func (c *MysqlConn) Insert(sql string, args ...interface{}) (lastInsertId int64, err error) {

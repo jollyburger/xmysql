@@ -3,6 +3,7 @@ package xmysql
 import (
 	"errors"
 	"sync"
+	"time"
 )
 
 type MysqlProxy struct {
@@ -14,6 +15,7 @@ var (
 	GMysqlProxy = &MysqlProxy{
 		mysqlConnPool: make(map[string]*MysqlConn),
 	}
+	DEFAULT_PING_PERIOD = 5 * time.Second
 )
 
 /*
@@ -29,6 +31,10 @@ func RegisterMysqlService(service string, master_addr, backup_addr string) error
 	GMysqlProxy.mysqlConnPool[service] = mysql_conn
 	GMysqlProxy.mux.Unlock()
 	return nil
+}
+
+func SetHealthCheckPeriod(period int) {
+	DEFAULT_PING_PERIOD = time.Duration(period) * time.Second
 }
 
 func Insert(service string, sql string, args ...interface{}) (lastInsertId int64, err error) {
